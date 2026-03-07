@@ -1,43 +1,60 @@
-fn most_frequent_word(text: &str) -> (String, usize) {
-    let words: Vec<&str> = text.split_whitespace().collect();
+use std::fs::File;
+use std::io::{Write, BufReader, BufRead};
 
-    let mut unique_words: Vec<&str> = Vec::new();
-    let mut counts: Vec<usize> = Vec::new();
+struct Book {
+    title: String,
+    author: String,
+    year: u16,
+}
 
-    for &word in &words {
-        let mut found_index: Option<usize> = None;
+fn save_books(books: &Vec<Book>, filename: &str) {
+    // Create the file (or overwrite it if it exists)
+    let mut file = File::create(filename).expect("Could not create file");
 
-        for i in 0..unique_words.len() {
-            if unique_words[i] == word {
-                found_index = Some(i);
-                break;
-            }
-        }
+    for book in books {
+        // Write each book as a comma-separated line
+        writeln!(file, "{},{},{}", book.title, book.author, book.year)
+            .expect("Failed to write to file");
+    }
+}
 
-        match found_index {
-            Some(i) => counts[i] += 1,
-            None => {
-                unique_words.push(word);
-                counts.push(1);
-            }
+fn load_books(filename: &str) -> Vec<Book> {
+    let file = File::open(filename).expect("Could not open file");
+    let reader = BufReader::new(file);
+    let mut books = Vec::new();
+
+    // Iterate over each line in the file
+    for line in reader.lines() {
+        let line = line.expect("Could not read line");
+        
+        // Split the line by commas into a vector of strings
+        let parts: Vec<&str> = line.split(',').collect();
+
+        // Ensure we have exactly 3 parts (title, author, year)
+        if parts.len() == 3 {
+            let title = parts[0].to_string();
+            let author = parts[1].to_string();
+            // Parse the year string into a u16
+            let year = parts[2].parse::<u16>().expect("Could not parse year");
+
+            books.push(Book { title, author, year });
         }
     }
-
-    let mut max_word = "";
-    let mut max_count = 0;
-
-    for i in 0..unique_words.len() {
-        if counts[i] > max_count {
-            max_count = counts[i];
-            max_word = unique_words[i];
-        }
-    }
-
-    (max_word.to_string(), max_count)
+    books
 }
 
 fn main() {
-    let text = "the quick brown fox jumps over the lazy dog the quick brown fox";
-    let (word, count) = most_frequent_word(text);
-    println!("Most frequent word: \"{}\" ({} times)", word, count);
+    let books = vec![
+        Book { title: "1984".to_string(), author: "George Orwell".to_string(), year: 1949 },
+        Book { title: "To Kill a Mockingbird".to_string(), author: "Harper Lee".to_string(), year: 1960 },
+    ];
+
+    save_books(&books, "books.txt");
+    println!("Books saved to file.");
+
+    let loaded_books = load_books("books.txt");
+    println!("Loaded books:");
+    for book in loaded_books {
+        println!("{} by {}, published in {}", book.title, book.author, book.year);
+    }
 }
